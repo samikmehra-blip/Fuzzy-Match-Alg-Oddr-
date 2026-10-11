@@ -32,7 +32,7 @@ export function cleanString(text: string): string
 
     const cleaned = text
         .toLowerCase() //Lowercasing
-        .replace(PUNCTUATION_REGEX, '') //Punctuation removing
+        .replace(PUNCTUATION_REGEX, ' ') //Punctuation removing
         .replace(CORP_SUFFIX_REGEX, '') //Suffix remover
         .replace(SPACES_REGEX, ' ') //Excess space removing
         .trim(); //Trimming
@@ -42,16 +42,30 @@ export function cleanString(text: string): string
     return cleaned;
 }
 
-export function calculateFuzzyScore(str1: string, str2: string)
-{
-    const s1 = cleanString(str1); //Cleans string 1
-    const s2 = cleanString(str2); //Cleans string 2
 
-    if(s1 == s2) return 1.0; //If perfect match, return 100% confidence
-    if(s1.length == 0 || s2.length == 0) return 0.0; //If one string is missing/empty, reutn 0% confidence
+export function calculateFuzzyScore(
+    str1: string,
+    str2: string
+): number {
+    const s1 = cleanString(str1);
+    const s2 = cleanString(str2);
 
-    const distance = levenshtein.get(s1, s2); 
-    const maxLength = Math.max(s1.length, s2.length);
+    if (s1 === s2) return 1.0;
+    if (!s1 || !s2) return 0.0;
 
-    return 1.0 - (distance/maxLength); //Returns difference in string
+    // Character-level similarity
+    const charDistance = levenshtein.get(s1, s2);
+    const charScore =
+        1 - charDistance / Math.max(s1.length, s2.length);
+
+    // Word-order-insensitive comparison
+    const sorted1 = s1.split(" ").sort().join(" ");
+    const sorted2 = s2.split(" ").sort().join(" ");
+
+    const sortedDistance = levenshtein.get(sorted1, sorted2);
+    const sortedScore =
+        1 - sortedDistance /
+        Math.max(sorted1.length, sorted2.length);
+
+    return Math.max(charScore, sortedScore);
 }
